@@ -1,0 +1,573 @@
+<title>LAB Cyber</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;800&display=swap">
+<style>
+/* Layout: an operator workstation. README pager pinned left, a Linux terminal window filling the right, tmux-style status line at its foot. Single dark theme by design. */
+:root{
+  --bg:#0a1016;
+  --panel:#101a23;
+  --panel-2:#15222d;
+  --line:#22384a;
+  --fg:#d3dfe6;
+  --muted:#7a93a2;
+  --cyan:#5cc8de;
+  --amber:#f2a93b;
+  --ok:#5fd394;
+  --bad:#ef6b5f;
+  --term:#060b10;
+  --body:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{height:100%}
+html,body{background:var(--bg);color:var(--fg)}
+body{height:100%;display:flex;flex-direction:column;font-family:var(--body);font-size:13.5px;line-height:1.6}
+button{font:inherit}
+.classbar{font-family:var(--mono);font-size:11px;letter-spacing:.3em;text-align:center;padding-block:5px;color:var(--amber);border-bottom:1px solid var(--line);background:var(--panel);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.app{flex:1;min-height:0;display:grid;grid-template-columns:minmax(290px,370px) minmax(0,1fr);gap:12px;padding-block:12px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1500px;width:100%;margin:0 auto}
+
+/* Window chrome shared by both panes */
+.win{display:flex;flex-direction:column;min-height:0;min-width:0;border:1px solid var(--line);background:var(--panel)}
+.titlebar{display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11.5px;color:var(--muted);background:var(--panel-2)}
+.titlebar .t{flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dots{display:flex;gap:6px}
+.dots i{width:10px;height:10px;border:1px solid var(--line);display:block}
+.dots i:last-child{border-color:var(--bad)}
+
+/* README pager */
+.readme{overflow:auto;padding:16px 16px 24px;min-width:0}
+.readme h1{font-family:var(--mono);font-weight:800;font-size:20px;letter-spacing:.06em;margin:0 0 4px}
+.readme h2{font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.18em;color:var(--amber);margin:22px 0 8px;text-transform:uppercase}
+.readme h2::before{content:"## ";color:var(--muted)}
+.readme p{margin:0 0 8px;color:var(--fg)}
+.readme .sub{color:var(--muted);font-size:12px;margin-bottom:12px}
+code{font-family:var(--mono);color:var(--ok);background:var(--term);border:1px solid var(--line);padding:1px 5px;font-size:12.5px;white-space:nowrap}
+ol.steps{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:7px}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:22px minmax(0,1fr);gap:6px;align-items:baseline}
+ol.steps li::before{content:counter(s);font-family:var(--mono);color:var(--muted);font-size:11.5px}
+ol.steps span{color:var(--muted);font-size:12.5px}
+table.ref{width:100%;border-collapse:collapse;font-size:12.5px}
+table.ref td{padding:5px 0;border-bottom:1px dashed var(--line);vertical-align:top}
+table.ref td:first-child{padding-right:10px;width:44%}
+.keybox{display:grid;gap:8px}
+.k{border:1px solid var(--line);padding:8px 10px;background:var(--panel-2)}
+.k b{font-family:var(--mono);display:block;font-size:12px;letter-spacing:.1em}
+.k.r b{color:var(--cyan)}.k.t b{color:var(--amber)}
+.k span{font-size:12.5px;color:var(--muted)}
+ul.cases{list-style:none;margin:0;padding:0;font-family:var(--mono);font-size:12px}
+ul.cases li{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line)}
+ul.cases li span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pill{font-size:10.5px;letter-spacing:.1em;padding:0 6px;border:1px solid var(--line);color:var(--muted);flex:none}
+.pill.ok{border-color:var(--ok);color:var(--ok)}.pill.no{border-color:var(--bad);color:var(--bad)}
+.tip{color:var(--muted);font-size:12.5px;margin:0 0 6px}
+.tip b{color:var(--fg);font-weight:500}
+
+/* Terminal */
+.termwin{background:var(--term)}
+#term{flex:1;min-height:0;overflow:auto;padding:12px 14px 6px;font-family:var(--mono);font-size:13.5px;line-height:1.55;cursor:text;position:relative;
+  background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(92,200,222,.03) 2px 3px)}
+#out div{white-space:pre-wrap;overflow-wrap:anywhere;min-height:1.55em}
+#inline{display:flex;align-items:baseline;flex-wrap:wrap;gap:0}
+#ps{white-space:pre}
+#cmd{flex:1;min-width:8ch;background:transparent;border:0;outline:0;color:var(--fg);font:inherit;padding:0;caret-color:var(--cyan)}
+.pu{color:var(--ok);font-weight:600}.pp{color:var(--cyan);font-weight:600}
+.dim{color:var(--muted)}.ok{color:var(--ok)}.err{color:var(--bad)}.warn{color:var(--amber)}.cyan{color:var(--cyan)}
+.dir{color:var(--cyan);font-weight:600}.exe{color:var(--ok);font-weight:600}
+.head{color:var(--amber);font-weight:600}
+.scen{color:var(--fg);font-weight:600}
+.ban{color:var(--cyan);text-shadow:0 0 8px rgba(92,200,222,.35)}
+.tag{color:var(--cyan)}
+.anim-r{color:var(--cyan)}.anim-t{color:var(--amber)}
+.statusline{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 14px;background:var(--ok);color:#06140c;font-family:var(--mono);font-size:12px;padding:2px 10px;font-variant-numeric:tabular-nums}
+.statusline .low{background:var(--bad);color:#1a0705;padding:0 4px}
+
+@media (max-width:860px){
+  body{height:auto}
+  .app{grid-template-columns:minmax(0,1fr)}
+  .termwin{order:-1;height:78vh}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+
+<div class="classbar">OFFICIAL // TRAINING ENVIRONMENT // LAB CYBER</div>
+
+<main class="app">
+  <section class="win" aria-label="README">
+    <div class="titlebar"><div class="dots"><i></i><i></i><i></i></div><span class="t">less ~/README.md</span><span>(END)</span></div>
+    <div class="readme">
+      <h1>LAB CYBER</h1>
+      <p class="sub">Data Protection Directorate · Operation DATASTATE</p>
+
+      <h2>Mission</h2>
+      <p>Five data assets have been flagged. Each one sits in its own folder inside <code>cases</code>. For every case, decide whether the data is <b>at rest</b> or <b>in transit</b>, then authorise the control that protects it.</p>
+
+      <h2>First steps</h2>
+      <ol class="steps">
+        <li><div>Log in with your initials <span>e.g. ck</span></div></li>
+        <li><div><code>ls</code> <span>see what is in your home folder</span></div></li>
+        <li><div><code>cd cases</code> <span>move into the cases folder</span></div></li>
+        <li><div><code>ls</code> <span>list the five case folders</span></div></li>
+        <li><div><code>cd case01_hospital_db</code> <span>open a case</span></div></li>
+        <li><div><code>cat brief.txt</code> <span>read the case brief</span></div></li>
+        <li><div><code>./triage.sh</code> <span>run the triage script and answer</span></div></li>
+        <li><div><code>cd ..</code> <span>go back up one folder, then pick the next case</span></div></li>
+        <li><div><code>cd ~</code> then <code>./debrief.sh</code> <span>once all five are closed</span></div></li>
+      </ol>
+
+      <h2>Command reference</h2>
+      <table class="ref">
+        <tr><td><code>pwd</code></td><td>Print the folder you are in</td></tr>
+        <tr><td><code>ls</code></td><td>List files and folders here</td></tr>
+        <tr><td><code>ls -l</code></td><td>Long list with permissions and sizes</td></tr>
+        <tr><td><code>ls -a</code></td><td>Include hidden files (names starting with .)</td></tr>
+        <tr><td><code>cd folder</code></td><td>Move into a folder</td></tr>
+        <tr><td><code>cd ..</code></td><td>Move up one level</td></tr>
+        <tr><td><code>cd ~</code></td><td>Jump back to your home folder</td></tr>
+        <tr><td><code>cat file</code></td><td>Print a file to the screen</td></tr>
+        <tr><td><code>./script.sh</code></td><td>Run a script in this folder</td></tr>
+        <tr><td><code>bash script.sh</code></td><td>Another way to run a script</td></tr>
+        <tr><td><code>clear</code></td><td>Clear the screen</td></tr>
+        <tr><td><code>history</code></td><td>Show commands you have typed</td></tr>
+        <tr><td><code>hint</code></td><td>Suggest your next step</td></tr>
+        <tr><td><code>logout</code></td><td>End your session</td></tr>
+      </table>
+
+      <h2>Tips</h2>
+      <p class="tip"><b>Tab</b> finishes a file or folder name for you.</p>
+      <p class="tip"><b>Up / Down arrows</b> bring back earlier commands.</p>
+      <p class="tip"><b>Case matters.</b> <code>Cases</code> and <code>cases</code> are different names in Linux.</p>
+      <p class="tip"><b>./ means "this folder".</b> Typing <code>triage.sh</code> on its own will fail. Linux only runs scripts from the current folder when you add <code>./</code></p>
+
+      <h2>Data states</h2>
+      <div class="keybox">
+        <div class="k r"><b>AT REST</b><span>Stored and not moving. Disks, servers, tapes, databases, USB sticks.</span></div>
+        <div class="k t"><b>IN TRANSIT</b><span>Moving across a network between two points. Interception and man-in-the-middle are the threats.</span></div>
+      </div>
+
+      <h2>Case status</h2>
+      <ul class="cases" id="caseList"></ul>
+    </div>
+  </section>
+
+  <section class="win termwin" aria-label="Terminal">
+    <div class="titlebar"><div class="dots"><i></i><i></i><i></i></div><span class="t" id="wtitle">labcyber: login</span><span>bash</span></div>
+    <div id="term">
+      <div id="out" aria-live="polite"></div>
+      <div id="inline" hidden><span id="ps"></span><input id="cmd" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" aria-label="Terminal input"></div>
+    </div>
+    <div class="statusline" id="status"><span>[labcyber] 0:bash*</span><span id="stRight">not logged in</span></div>
+  </section>
+</main>
+
+<script>
+const CASES=[
+ {id:"INC-4471",dir:"case01_hospital_db",sev:"P2 CONFIDENTIAL",ans:"R",
+  text:"An encrypted database storing patient medical history on a hospital server.",
+  meta:[["Asset","PAS-DB-02 (SQL)"],["Location","On-prem data centre"],["Data class","Special category (health)"],["Records","~412,000"]],
+  nodes:["SERVER","DISK"],
+  ctrls:[["AES-256 encryption with role-based access control and audit logging",1],["TLS 1.3 on every connection to the server",0],["Switch every field from encryption to hashing",0]],
+  why:"The records are stored on the server, so this is data at rest. Encryption stops a stolen disk being readable and access control decides who can decrypt. Hashing is one-way, so it suits passwords but not medical notes a doctor needs to read back.",
+  focus:["Hashing vs encryption","Access control","Audit trail"]},
+ {id:"INC-4472",dir:"case02_pos_payment",sev:"P1 FINANCIAL",ans:"T",
+  text:"A credit card transaction being sent from a point-of-sale terminal to a bank.",
+  meta:[["Asset","POS-TERM-17"],["Destination","Acquiring bank gateway"],["Port","TCP/443"],["Standard","PCI DSS scope"]],
+  nodes:["POS","BANK"],
+  ctrls:[["Full-disk encryption on the terminal",0],["TLS with certificate validation end to end",1],["Daily off-site backup of transactions",0]],
+  why:"The card data is moving from the terminal to the bank, so it is data in transit. TLS encrypts the session and certificate checks stop an attacker posing as the bank in a man-in-the-middle attack.",
+  focus:["TLS/SSL","Man-in-the-middle","Certificates"]},
+ {id:"INC-4473",dir:"case03_tape_backup",sev:"P3 INTEGRITY",ans:"R",
+  text:"A backup of school enrollment records stored on an off-site magnetic tape drive.",
+  meta:[["Asset","LTO-8 cartridge #B07"],["Location","Off-site vault"],["Retention","7 years"],["Last verified","142 days ago"]],
+  nodes:["TAPE","VAULT"],
+  ctrls:[["IPsec tunnel between the school and the vault",0],["Physical security, encrypted tapes and scheduled integrity checks",1],["Two-factor login for staff email",0]],
+  why:"The tape is sitting in a vault, so this is data at rest. The threats are physical theft and slow degradation. Locks, logged access and encrypted tapes cover theft. Regular test restores and checksums catch bit rot before the backup is needed.",
+  focus:["Physical security","Bit rot","Integrity checks"]},
+ {id:"INC-4474",dir:"case04_cloud_stream",sev:"P3 AVAILABILITY",ans:"T",
+  text:"A user streaming a video file from an AWS cloud bucket to their smartphone.",
+  meta:[["Source","Cloud object storage"],["Client","Mobile on public Wi-Fi"],["Transport","Packet switched, HTTPS"],["Size","1.8 GB"]],
+  nodes:["CLOUD","PHONE"],
+  ctrls:[["Encrypted channel (HTTPS, or a VPN/IPsec tunnel on untrusted Wi-Fi)",1],["BitLocker on the phone",0],["Archive the video to magnetic tape",0]],
+  why:"The file is split into packets and routed across the internet to the phone, so it is data in transit. Packets can take different routes. An encrypted channel stops anyone on the public Wi-Fi reading or altering the stream.",
+  focus:["Packet switching","IPsec","VPNs"]},
+ {id:"INC-4475",dir:"case05_local_docx",sev:"P4 ENDPOINT",ans:"R",
+  text:"A .docx file saved in a local computer's \"Documents\" folder.",
+  meta:[["Asset","WS-STAFF-031"],["Path","C:\\Users\\finance\\Documents"],["Owner","Finance office"],["Disk","Unencrypted SSD"]],
+  nodes:["PC","SSD"],
+  ctrls:[["File system permissions plus BitLocker full-disk encryption",1],["TLS on the office network",0],["A VPN for the finance office",0]],
+  why:"The file is saved on the local drive, so this is data at rest. NTFS permissions stop other users opening it. BitLocker means a stolen laptop or removed SSD gives an attacker nothing readable.",
+  focus:["File permissions","BitLocker","Endpoint security"]}
+];
+
+const BANNER=String.raw` _      _   ___     ___ __   __ ___  ___  ___
+| |    /_\ | _ )   / __|\ \ / /| _ )| __|| _ \
+| |__ / _ \| _ \  | (__  \ V / | _ \| _| |   /
+|____/_/ \_\___/   \___|  |_|  |___/|___||_|_\
+`.trimEnd();
+
+const $=s=>document.querySelector(s);
+const out=$("#out"),term=$("#term"),inp=$("#cmd"),ps=$("#ps"),inline=$("#inline");
+const REDUCE=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const sleep=ms=>new Promise(r=>setTimeout(r,REDUCE?Math.min(ms,20):ms));
+let user="",HOME=[],cwd=[],fs=null,mode="boot",score=0,results={},hist=[],hIdx=0,secs=600,timerId=null,pending=null,breached=false;
+
+/* ---------- output ---------- */
+function scroll(){term.scrollTop=term.scrollHeight}
+function line(text="",cls){const d=document.createElement("div");if(cls)d.className=cls;d.textContent=text;out.appendChild(d);scroll();return d}
+function rich(parts){const d=document.createElement("div");parts.forEach(p=>{if(typeof p==="string")p=[p];const s=document.createElement("span");if(p[1])s.className=p[1];s.textContent=p[0];d.appendChild(s)});out.appendChild(d);scroll();return d}
+function setPS(parts){ps.innerHTML="";parts.forEach(([t,c])=>{const s=document.createElement("span");if(c)s.className=c;s.textContent=t;ps.appendChild(s)})}
+function promptParts(){return [[`${user}@labcyber`,"pu"],[":"],[pathStr(cwd),"pp"],["$ "]]}
+function busy(){mode="busy";inline.hidden=true}
+function shell(){mode="shell";setPS(promptParts());inline.hidden=false;inp.value="";inp.focus({preventScroll:true});scroll();$("#wtitle").textContent=`${user}@labcyber: ${pathStr(cwd)}`}
+function ask(prompt,valid,msg){return new Promise(res=>{mode="ask";pending={res,valid,msg,prompt};setPS([[prompt,"warn"]]);inline.hidden=false;inp.value="";inp.focus({preventScroll:true});scroll()})}
+function shuffle(a){a=a.slice();for(let k=a.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[a[k],a[j]]=[a[j],a[k]]}return a}
+
+/* ---------- filesystem ---------- */
+const README_TXT=`LAB CYBER // OPERATION DATASTATE
+================================
+Five data assets are waiting in ~/cases.
+
+  cd cases          move into the cases folder
+  ls                list what is inside
+  cd <case folder>  open a case
+  cat brief.txt     read the brief
+  ./triage.sh       run the triage script
+  cd ..             go back up one level
+
+When every case is closed:
+  cd ~
+  ./debrief.sh`;
+
+function briefText(c){return `LAB CYBER // CASE BRIEF
+Incident  : ${c.id}
+Priority  : ${c.sev}
+----------------------------------------
+${c.text}
+
+Asset details
+${c.meta.map(([k,v])=>`  ${k.padEnd(13)} ${v}`).join("\n")}
+
+Action: run ./triage.sh to classify this asset.`}
+
+function scriptText(c){return `#!/bin/bash
+# LAB-CYBER triage engine v4.2
+source /opt/labcyber/lib/engine.sh
+
+load_asset "${c.id}"
+classify_state --interactive --prompt "y/n"
+recommend_control --options 3
+write_report ./report.txt`}
+
+const DEBRIEF_SRC=`#!/bin/bash
+# LAB-CYBER shift debrief
+source /opt/labcyber/lib/engine.sh
+require_closed_cases 5 || exit 1
+compile_report --analyst "$USER"`;
+
+function buildFS(){
+  const home={t:"d",c:{}};
+  home.c["README.txt"]={t:"f",body:README_TXT};
+  home.c[".clearance"]={t:"f",body:()=>`analyst=${user}\nclearance=${rank().name.toUpperCase()}\nscore=${score}`};
+  home.c[".bash_history"]={t:"f",body:()=>hist.join("\n")};
+  home.c["debrief.sh"]={t:"f",x:true,body:DEBRIEF_SRC,run:runDebrief};
+  const cases={t:"d",c:{}};
+  CASES.forEach(cs=>{cases.c[cs.dir]={t:"d",c:{"brief.txt":{t:"f",body:briefText(cs)},"triage.sh":{t:"f",x:true,body:scriptText(cs),run:()=>runCase(cs)}}}});
+  home.c.cases=cases;
+  fs={t:"d",c:{home:{t:"d",c:{[user]:home}},opt:{t:"d",c:{labcyber:{t:"d",c:{lib:{t:"d",c:{"engine.sh":{t:"f",body:"# engine source restricted\n# clearance level L3 required"}}}}}}},etc:{t:"d",c:{"hostname":{t:"f",body:"labcyber"}}},var:{t:"d",c:{log:{t:"d",c:{"auth.log":{t:"f",body:()=>`Oct 14 07:00:01 labcyber sshd[2211]: Accepted session for ${user} from 10.4.2.11`}}}}}}};
+  HOME=["home",user];cwd=HOME.slice();
+}
+function nodeAt(path){let n=fs;for(const p of path){if(!n||n.t!=="d"||!n.c[p])return null;n=n.c[p]}return n}
+function resolve(p){
+  if(p===undefined||p===""||p==="~")return HOME.slice();
+  let base;
+  if(p.startsWith("~/")){base=HOME.slice();p=p.slice(2)}
+  else if(p.startsWith("/"))base=[];
+  else base=cwd.slice();
+  for(const seg of p.split("/")){if(!seg||seg===".")continue;if(seg==="..")base.pop();else base.push(seg)}
+  return base;
+}
+function pathStr(a){const s="/"+a.join("/"),h="/"+HOME.join("/");return s===h?"~":s.startsWith(h+"/")?"~"+s.slice(h.length):s}
+function body(n){return typeof n.body==="function"?n.body():n.body}
+function perms(n){return n.t==="d"?"drwxr-xr-x":n.x?"-rwxr-x---":"-rw-r-----"}
+function size(n){return n.t==="d"?4096:body(n).length}
+
+/* ---------- commands ---------- */
+const CMDS={
+  help(){
+    line("LAB-CYBER bash, version 5.2 (training build)","dim");
+    [["pwd","print working directory"],["ls [-l] [-a] [path]","list directory contents"],["cd [path]","change directory (cd .. goes up)"],["cat <file>","print a file"],["./<script>.sh","run a script in this folder"],["bash <script>.sh","run a script"],["clear","clear the screen"],["history","show previous commands"],["whoami","show your analyst ID"],["hint","suggest your next step"],["logout","end the session"]]
+      .forEach(([a,b])=>rich([["  "+a.padEnd(22),"ok"],[b]]));
+  },
+  pwd(){line("/"+cwd.join("/"))},
+  whoami(){line(user)},
+  hostname(){line("labcyber")},
+  date(){line(new Date().toString().replace(/\s*\(.*\)$/,""))},
+  echo(a){line(a.join(" "))},
+  clear(){out.innerHTML=""},
+  history(){hist.forEach((h,k)=>line(String(k+1).padStart(5)+"  "+h))},
+  sudo(){line(`[sudo] ${user} is not in the sudoers file. This incident will be reported.`,"err")},
+  logout(){logout()},
+  exit(){logout()},
+  ls(a){
+    const flags=a.filter(x=>x.startsWith("-")).join("");
+    const bad=flags.replace(/[-la]/g,"");
+    if(bad){line(`ls: invalid option -- '${bad[0]}'`,"err");return}
+    const long=flags.includes("l"),all=flags.includes("a");
+    const targets=a.filter(x=>!x.startsWith("-"));
+    const list=targets.length?targets:["."];
+    list.forEach((t,ti)=>{
+      const n=nodeAt(resolve(t));
+      if(!n){line(`ls: cannot access '${t}': No such file or directory`,"err");return}
+      if(list.length>1)line(`${t}:`);
+      let entries=n.t==="d"?Object.keys(n.c).sort().map(k=>[k,n.c[k]]):[[t,n]];
+      if(n.t==="d"&&all)entries=[[".",n],["..",n],...entries];
+      if(!all)entries=entries.filter(([k])=>!k.startsWith("."));
+      if(long){
+        if(n.t==="d")line(`total ${entries.length*4}`);
+        entries.forEach(([k,e])=>rich([[`${perms(e)} 1 ${user.padEnd(7)} lab ${String(size(e)).padStart(5)} Oct 14 07:00 `],[k,e.t==="d"?"dir":e.x?"exe":""]]));
+      }else{
+        const parts=[];entries.forEach(([k,e],i)=>{parts.push([k,e.t==="d"?"dir":e.x?"exe":""]);if(i<entries.length-1)parts.push(["   "])});
+        if(parts.length)rich(parts);
+      }
+      if(list.length>1&&ti<list.length-1)line("");
+    });
+  },
+  cd(a){
+    if(a.length>1){line("bash: cd: too many arguments","err");return}
+    const p=resolve(a[0]),n=nodeAt(p);
+    if(!n){line(`bash: cd: ${a[0]}: No such file or directory`,"err");return}
+    if(n.t!=="d"){line(`bash: cd: ${a[0]}: Not a directory`,"err");return}
+    cwd=p;
+  },
+  cat(a){
+    if(!a.length){line("cat: missing file operand. Try: cat brief.txt","err");return}
+    a.forEach(t=>{const n=nodeAt(resolve(t));
+      if(!n)line(`cat: ${t}: No such file or directory`,"err");
+      else if(n.t==="d")line(`cat: ${t}: Is a directory`,"err");
+      else body(n).split("\n").forEach(l=>line(l));});
+  },
+  hint(){
+    const done=Object.keys(results).length;
+    const here=nodeAt(cwd);
+    const inCase=CASES.find(c=>cwd.join("/")===[...HOME,"cases",c.dir].join("/"));
+    const next=CASES.find(c=>!results[c.id]);
+    let msg;
+    if(done===CASES.length)msg=pathStr(cwd)==="~"?"All cases closed. Run ./debrief.sh":"All cases closed. Type cd ~ then ./debrief.sh";
+    else if(inCase&&results[inCase.id])msg=`This case is closed. Type cd .. then cd ${next.dir}`;
+    else if(inCase)msg="Read the brief with cat brief.txt then run ./triage.sh";
+    else if(pathStr(cwd)==="~/cases")msg=`Open a case folder. Try: cd ${next.dir}`;
+    else if(pathStr(cwd)==="~")msg="Your cases are in the cases folder. Try: cd cases";
+    else msg="You have wandered off. Type cd ~ to go home";
+    rich([["hint: ","warn"],[msg]]);
+  }
+};
+
+async function exec(raw){
+  const toks=raw.trim().split(/\s+/).filter(Boolean);
+  if(!toks.length)return;
+  const [cmd,...args]=toks;
+  let scriptPath=null,viaShell=false;
+  if(cmd==="bash"||cmd==="sh"){if(!args.length){line("bash: interactive subshell disabled on this terminal. Try: bash triage.sh","err");return}scriptPath=args[0];viaShell=true}
+  else if(cmd.includes("/"))scriptPath=cmd;
+  if(scriptPath!==null){
+    const n=nodeAt(resolve(scriptPath));
+    const who=viaShell?`${cmd}: ${scriptPath}`:`bash: ${scriptPath}`;
+    if(!n){line(`${who}: No such file or directory`,"err");return}
+    if(n.t==="d"){line(`${who}: Is a directory`,"err");return}
+    if(!n.run){if(viaShell){line(`${scriptPath}: line 1: syntax error near unexpected token`,"err")}else line(`${who}: Permission denied`,"err");return}
+    await n.run();return;
+  }
+  if(cmd.endsWith(".sh")){line(`${cmd}: command not found`,"err");rich([["lab-hint: ","warn"],[`scripts in this folder need ./ in front. Try: ./${cmd}`]]);return}
+  if(cmd==="cd.."){line("cd..: command not found","err");rich([["lab-hint: ","warn"],["Linux needs a space. Try: cd .."]]);return}
+  if(Object.prototype.hasOwnProperty.call(CMDS,cmd)){await CMDS[cmd](args);return}
+  line(`${cmd}: command not found`,"err");
+}
+
+/* ---------- animations ---------- */
+async function progress(label,steps=12){
+  const el=line("","dim");
+  for(let s=0;s<=steps;s++){const pct=Math.round(s/steps*100),fill=Math.round(pct/5);
+    el.textContent=`[${"#".repeat(fill)}${".".repeat(20-fill)}] ${String(pct).padStart(3)}%  ${label}`;await sleep(70+Math.random()*60)}
+}
+async function animate(c){
+  const el=line("",c.ans==="R"?"anim-r":"anim-t");
+  const W=26,frames=REDUCE?1:30;
+  for(let f=0;f<frames;f++){
+    if(c.ans==="T"){let tr=Array(W).fill("─");[0,9,18].forEach(o=>{tr[(f+o)%W]="■"});el.textContent=`${c.nodes[0].padStart(6)} ]${tr.join("")}[ ${c.nodes[1]}   packets in flight`}
+    else{const cells=Array.from({length:W},()=>"░▒▓"[Math.floor(Math.random()*3)]).join("");el.textContent=`${c.nodes[0].padStart(6)} [${cells}] ${c.nodes[1]}   sector scan`}
+    await sleep(85);
+  }
+  el.textContent=c.ans==="T"?`${c.nodes[0].padStart(6)} ]${"─".repeat(11)}▶▶▶▶${"─".repeat(11)}[ ${c.nodes[1]}   STATE: IN TRANSIT`:`${c.nodes[0].padStart(6)} [${"▓".repeat(W)}] ${c.nodes[1]}   STATE: AT REST`;
+}
+
+/* ---------- case script ---------- */
+async function runCase(cs){
+  if(results[cs.id]){line(`[!] ${cs.id} is already closed. Read report.txt in this folder.`,"warn");return}
+  busy();
+  line("[*] LAB-CYBER triage engine v4.2","dim");
+  await progress(`loading ${cs.id} telemetry`,14);
+  line("");
+  line(`──── INCIDENT ${cs.id} ──── ${cs.sev} ────`,"head");
+  line(cs.text,"scen");
+  cs.meta.forEach(([k,v])=>rich([["  "+k.padEnd(14),"dim"],[v]]));
+  line("");
+  const yn=await ask("Is this data AT REST? (y/n): ",v=>/^(y|n|yes|no)$/i.test(v),"Invalid input. Enter y or n.");
+  const pick=/^y/i.test(yn)?"R":"T",okS=pick===cs.ans,label=cs.ans==="R"?"DATA AT REST":"DATA IN TRANSIT";
+  line("[*] correlating storage and network telemetry...","dim");
+  await animate(cs);
+  if(okS){score+=100;rich([["[ OK ] ","ok"],[`State confirmed: ${label}  +100`]])}
+  else rich([["[FAIL] ","err"],[`Miscall. Telemetry shows ${label}.`]]);
+  updateStatus();
+  line("");
+  line("Select the primary control to deploy:");
+  const opts=shuffle(cs.ctrls);
+  opts.forEach(([t],k)=>rich([[`  [${k+1}] `,"cyan"],[t]]));
+  const n=await ask("Enter option [1-3]: ",v=>/^[1-3]$/.test(v),"Invalid option. Enter 1, 2 or 3.");
+  const okC=opts[+n-1][1]===1,correct=opts.find(o=>o[1]===1)[0];
+  await progress("submitting to QA",8);
+  if(okC){score+=50;rich([["[ OK ] ","ok"],["Control authorised  +50"]])}
+  else{rich([["[FAIL] ","err"],["Control rejected by QA."]]);rich([["       correct: ","dim"],[correct]])}
+  line("");
+  line("ANALYST NOTE","head");
+  line(cs.why);
+  rich([["focus  ","dim"],...cs.focus.flatMap(f=>[[`[${f}]`,"tag"],[" "]])]);
+  results[cs.id]={state:okS,ctrl:okC,pick};
+  nodeAt([...HOME,"cases",cs.dir]).c["report.txt"]={t:"f",body:`LAB CYBER // TRIAGE REPORT
+Incident   : ${cs.id}
+Analyst    : ${user}
+State      : ${label}
+Your call  : ${pick==="R"?"AT REST":"IN TRANSIT"} ${okS?"(correct)":"(miscall)"}
+Control    : ${correct}
+Control QA : ${okC?"authorised":"rejected"}
+Focus      : ${cs.focus.join(", ")}`};
+  await progress("writing report.txt",8);
+  updateStatus();renderCaseList();
+  const left=CASES.length-Object.keys(results).length;
+  line("");
+  if(left)rich([["[*] ","ok"],[`Ticket ${cs.id} closed. ${left} remaining. Type `],["cd ..","ok"],[" to return to the case list."]]);
+  else rich([["[!] ","warn"],["All cases closed. Type "],["cd ~","ok"],[" then "],["./debrief.sh","ok"]]);
+  shell();
+}
+
+function rank(){const max=CASES.length*150,p=score/max;
+  return [[1,"L4","Senior Analyst"],[.8,"L3","Analyst"],[.5,"L2","Junior Analyst"],[0,"L1","Trainee"]].map(([t,c,n])=>({t,code:c,name:n})).find(r=>p>=r.t)}
+
+async function runDebrief(){
+  const left=CASES.length-Object.keys(results).length;
+  if(left){line(`debrief.sh: ${left} case(s) still open. Close every case first.`,"err");return}
+  busy();
+  await progress("compiling shift report",16);
+  line("");
+  line("════════ SHIFT DEBRIEF ════════","head");
+  rich([["analyst   ","dim"],[user]]);
+  rich([["score     ","dim"],[`${score} / ${CASES.length*150}`]]);
+  const r=rank();
+  rich([["clearance ","dim"],[`${r.code} ${r.name.toUpperCase()}`,"ok"]]);
+  line("");
+  line("INCIDENT   STATE        YOUR CALL    CONTROL","dim");
+  CASES.forEach(c=>{const x=results[c.id];
+    rich([[c.id.padEnd(11)],[(c.ans==="R"?"AT REST":"IN TRANSIT").padEnd(13)],[(x.pick==="R"?"AT REST":"IN TRANSIT").padEnd(13),x.state?"ok":"err"],[x.ctrl?"authorised":"rejected",x.ctrl?"ok":"err"]])});
+  line("");
+  line("EXAM FOLLOW-UP // EXPLAIN","head");
+  line("A hospital encrypts its patient database on the server. Explain why this alone does not protect patient data when a clinician views a record from a ward laptop.");
+  line("");
+  fs.c.home.c[user].c["model_answer.txt"]={t:"f",body:`MODEL ANSWER
+Encryption at rest only protects the record while it is stored on the server.
+When the clinician opens it, the record is decrypted and sent across the
+network to the laptop, so it becomes data in transit. Without TLS the packets
+could be intercepted or altered by a man-in-the-middle. Once it reaches the
+laptop it may be cached locally, which makes it data at rest again on a less
+secure device. Each state needs its own control.`};
+  rich([["[*] ","ok"],["Discuss your answer, then reveal the model answer with "],["cat model_answer.txt","ok"]]);
+  rich([["[*] ","ok"],["Type "],["logout","ok"],[" to hand the terminal to the next analyst."]]);
+  shell();
+}
+
+/* ---------- status + README ---------- */
+function updateStatus(){
+  if(!user){$("#stRight").textContent="not logged in";return}
+  const m=Math.floor(secs/60),s=String(secs%60).padStart(2,"0");
+  const done=Object.keys(results).length;
+  $("#stRight").innerHTML="";
+  const parts=[`${user}`,`score ${String(score).padStart(4,"0")}`,`cases ${done}/${CASES.length}`];
+  $("#stRight").textContent=parts.join("  │  ")+"  │  ";
+  const t=document.createElement("span");t.textContent=`SLA ${m}:${s}`;if(secs<=60)t.className="low";$("#stRight").appendChild(t);
+}
+function renderCaseList(){
+  $("#caseList").innerHTML="";
+  CASES.forEach(c=>{const li=document.createElement("li"),a=document.createElement("span"),b=document.createElement("span");
+    a.textContent=c.dir;const r=results[c.id];
+    b.className="pill"+(r?(r.state&&r.ctrl?" ok":" no"):"");b.textContent=r?(r.state&&r.ctrl?"CLOSED":"REVIEW"):"OPEN";
+    li.append(a,b);$("#caseList").appendChild(li)});
+}
+
+/* ---------- session ---------- */
+async function boot(){
+  busy();out.innerHTML="";user="";results={};score=0;hist=[];secs=600;breached=false;clearInterval(timerId);
+  updateStatus();renderCaseList();$("#wtitle").textContent="labcyber: login";
+  const lines=[["LAB-OS 4.2.1 (tty1)",""],["[ OK ] verified kernel signature","ok"],["[ OK ] mounted /vault (AES-256)","ok"],["[ OK ] TLS 1.3 tunnel to HQ established","ok"],["[ OK ] case queue loaded: 5 assets flagged","ok"]];
+  for(const [t,c] of lines){line(t,c);await sleep(260)}
+  line("");
+  const ini=await ask("labcyber login (your initials): ",v=>/^[a-z]{2,3}$/i.test(v.trim()),"Login incorrect. Enter 2 or 3 letters only.");
+  user="agt-"+ini.trim().toLowerCase();
+  await progress("authenticating",10);
+  line(`Last login: ${new Date(Date.now()-86400000).toDateString()} 15:42:07 from 10.4.2.11`,"dim");
+  line("");
+  BANNER.split("\n").forEach(l=>line(l,"ban"));
+  line("");
+  line("Data Protection Directorate // Operation DATASTATE","head");
+  line(`Welcome, ${user}. 5 assets are flagged in ~/cases. Shift SLA is 10 minutes.`);
+  rich([["New to the terminal? Follow the README on the left or type ","dim"],["help","ok"]]);
+  line("");
+  buildFS();renderCaseList();
+  timerId=setInterval(()=>{secs=Math.max(0,secs-1);updateStatus();if(secs===0&&!breached){breached=true;clearInterval(timerId);line("");line("[!] SLA breached. Supervisor notified.","warn");scroll()}},1000);
+  updateStatus();shell();
+}
+function logout(){busy();line("logout","dim");setTimeout(boot,500)}
+
+/* ---------- input ---------- */
+function complete(){
+  const v=inp.value,m=v.match(/(\S*)$/),tok=m[1];
+  const cut=tok.lastIndexOf("/"),dirpart=cut>=0?tok.slice(0,cut+1):"",base=cut>=0?tok.slice(cut+1):tok;
+  const dir=nodeAt(resolve(dirpart||"."));
+  if(!dir||dir.t!=="d")return;
+  const names=Object.keys(dir.c).filter(k=>k.startsWith(base)&&(base.startsWith(".")||!k.startsWith("."))).sort();
+  if(!names.length)return;
+  if(names.length===1){const n=names[0];inp.value=v.slice(0,v.length-tok.length)+dirpart+n+(dir.c[n].t==="d"?"/":" ");return}
+  let pre=names[0];names.forEach(n=>{while(!n.startsWith(pre))pre=pre.slice(0,-1)});
+  if(pre.length>base.length){inp.value=v.slice(0,v.length-tok.length)+dirpart+pre;return}
+  rich([...promptParts(),[v]]);
+  rich(names.flatMap((n,i)=>[[n,dir.c[n].t==="d"?"dir":dir.c[n].x?"exe":""],[i<names.length-1?"   ":""]]));
+}
+
+inp.addEventListener("keydown",async e=>{
+  if(e.key==="Enter"){
+    e.preventDefault();const v=inp.value;inp.value="";
+    if(mode==="ask"&&pending){
+      rich([[pending.prompt,"warn"],[v]]);
+      if(pending.valid(v.trim())){const p=pending;pending=null;busy();p.res(v.trim())}
+      else line(pending.msg,"err");
+      return;
+    }
+    if(mode==="shell"){
+      rich([...promptParts(),[v]]);
+      if(v.trim()){hist.push(v.trim());hIdx=hist.length}
+      busy();await exec(v);
+      if(mode==="busy")shell();
+    }
+    return;
+  }
+  if(mode!=="shell")return;
+  if(e.key==="Tab"){e.preventDefault();complete()}
+  else if(e.key==="ArrowUp"){e.preventDefault();if(hIdx>0){hIdx--;inp.value=hist[hIdx]}}
+  else if(e.key==="ArrowDown"){e.preventDefault();if(hIdx<hist.length-1){hIdx++;inp.value=hist[hIdx]}else{hIdx=hist.length;inp.value=""}}
+  else if(e.key.toLowerCase()==="l"&&e.ctrlKey){e.preventDefault();out.innerHTML=""}
+  else if(e.key.toLowerCase()==="c"&&e.ctrlKey&&!getSelection().toString()){e.preventDefault();rich([...promptParts(),[inp.value+"^C"]]);inp.value=""}
+});
+term.addEventListener("click",()=>{if(!getSelection().toString()&&!inline.hidden)inp.focus({preventScroll:true})});
+
+boot();
+</script>
